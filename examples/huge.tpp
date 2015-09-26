@@ -6,6 +6,7 @@
 --huge Text!
 --newpage qwertz
 --huge Abrakadabra!
+
 --newpage
 Normaler Text
 ---
@@ -14,9 +15,28 @@ Normaler Text
 --huge Is that a stupid presentation!
 ---
 Normal text.
+
 --newpage
 --sethugefont block 
 --huge other font
+
 --newpage
 --sethugefont standard
 --huge This is the end...
+
+--newpage
+--sethugefont ogre
+--huge Erlang for your great Good
+
+--newpage
+--sethugefont ntgreek
+--huge Erlang for your great Good
+
+--newpage
+--sethugefont rectangles
+--huge Erlang for your great Good
+
+--newpage
+--sethugefont doh
+--huge Erlang for your great Good
+
