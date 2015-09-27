@@ -1,5 +1,6 @@
 #!/usr/bin/env ruby
 require 'io/console'
+require 'open3'
 version_number = "1.3.1"
 
 # Loads the ncurses-ruby module and imports "Ncurses" into the
@@ -257,6 +258,11 @@ class TppVisualizer
     Kernel.exit(1)
   end
 
+  def do_pexec(cmdline)
+    $stderr.puts "Error: TppVisualizer#do_pexec has been called directly."
+    Kernel.exit(1)
+  end
+
   def do_wait
     $stderr.puts "Error: TppVisualizer#do_wait has been called directly."
     Kernel.exit(1)
@@ -417,6 +423,9 @@ class TppVisualizer
       when /^--exec /
         cmdline = line.sub(/^--exec /,"")
         do_exec(cmdline)
+      when /^--pexec /
+        cmdline = line.sub(/^--pexec /,"")
+        do_pexec(cmdline)
       when /^---/
         do_wait
         return true
@@ -523,6 +532,9 @@ class NcursesVisualizer < TppVisualizer
     @indent = 3
     @cur_line = @voffset
     @output = @shelloutput = false
+    #
+    @output_border_color = "white"
+    @fgcolors = Array.new
   end
 
   def get_key
@@ -601,7 +613,7 @@ class NcursesVisualizer < TppVisualizer
             @screen.refresh
           end
           return
-		when Ncurses::KEY_LEFT
+    when Ncurses::KEY_LEFT
           cursor_pos = [0, cursor_pos-1].max # jump one character to the left
         when Ncurses::KEY_RIGHT
           cursor_pos = [0, cursor_pos+1].max # jump one character to the right
@@ -748,6 +760,20 @@ class NcursesVisualizer < TppVisualizer
     if not rc then
       # @todo: add error message
     end
+  end
+
+  def do_pexec(cmdline)
+    do_beginshelloutput
+    print_line "$ #{cmdline}"
+    out, err, st = Open3.capture3(cmdline)
+    out.split(/\n/).each do |line|
+      print_line line
+    end
+    do_color "red"
+    err.split(/\n/).each do |line|
+      print_line line
+    end
+    do_endshelloutput
   end
 
   def do_wait
@@ -904,6 +930,16 @@ class NcursesVisualizer < TppVisualizer
     end
   end
 
+  def push_fgcolor (color)
+    @fgcolors.push @fgcolor
+    do_fgcolor color
+  end
+
+  def pop_fgcolor
+    @fgcolor = @fgcolors.pop
+    Ncurses.attron(Ncurses.COLOR_PAIR(@fgcolor))
+  end
+
   def do_fgcolor(color)
     @fgcolor = ColorMap.get_color_pair(color)
     Ncurses.attron(Ncurses.COLOR_PAIR(@fgcolor))
@@ -979,7 +1015,9 @@ class NcursesVisualizer < TppVisualizer
     lines.each do |l|
       @screen.move(@cur_line,@indent)
       if (@output or @shelloutput) and ! @slideoutput then
+        push_fgcolor @output_border_color
         @screen.addstr("| ")
+        pop_fgcolor
       end
       if @shelloutput and (l =~ /^\$/ or l=~ /^%/ or l =~ /^#/) then # allow sh and csh style prompts
         type_line(l)
@@ -990,7 +1028,9 @@ class NcursesVisualizer < TppVisualizer
       end
       if (@output or @shelloutput) and ! @slideoutput then
         @screen.move(@cur_line,@termwidth - @indent - 2)
+        push_fgcolor @output_border_color
         @screen.addstr(" |")
+        pop_fgcolor
       end
       @cur_line += 1
     end
@@ -1047,12 +1087,12 @@ class NcursesVisualizer < TppVisualizer
     @screen.move(@termheight - 2, @indent)
     @screen.attroff(Ncurses::A_BOLD) # this is bad
     @screen.addstr("[slide #{cur_page}/#{max_pages}]")
-	if @footer_txt.to_s.length > 0 then
-	  do_footer(@footer_txt)
-	end
-	if @header_txt.to_s.length > 0 then
-	  do_header(@header_txt)
-	end
+  if @footer_txt.to_s.length > 0 then
+    do_footer(@footer_txt)
+  end
+  if @header_txt.to_s.length > 0 then
+    do_header(@header_txt)
+  end
 
     if eop then
       draw_eop_marker
