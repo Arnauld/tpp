@@ -769,10 +769,11 @@ class NcursesVisualizer < TppVisualizer
     out.split(/\n/).each do |line|
       print_line line
     end
-    do_color "red"
+    push_fgcolor "red"
     err.split(/\n/).each do |line|
       print_line line
     end
+    pop_fgcolor
     do_endshelloutput
   end
 
